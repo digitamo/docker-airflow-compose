@@ -1,9 +1,13 @@
 import os
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
+from pyspark.sql.functions import collect_list, map_from_entries, struct, col, max
+from pyspark.sql import Window
 
-EVENTS_S3_KEY = os.environ.get("EVENTS_S3_KEY")
+EVENTS_S3_URI = os.environ.get("EVENTS_S3_URI")
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT")
+S3_KEY = os.environ.get("S3_KEY")
+OUTPUT_BUCKET = "s3://output/"
 
 
 def create_spark_session():
@@ -25,9 +29,17 @@ def create_spark_session():
     return SparkSession(spark_context)
 
 
-print("EVENTS_S3_KEY >> ", EVENTS_S3_KEY)
-print("S3_ENDPOINT >> ", S3_ENDPOINT)
-
 spark = create_spark_session()
-events_df = spark.read.csv(EVENTS_S3_KEY, header=True)
-events_df.show()
+events_df = spark.read.csv(EVENTS_S3_URI, header=True).repartition("id")
+
+window = Window.partitionBy("id", "name")
+events_df = (
+    events_df.withColumn("max_timestamp", max("timestamp").over(window))
+    .where(col("timestamp") == col("max_timestamp"))
+    .drop("max_timestamp")
+    .groupBy("id")
+    .agg(map_from_entries(collect_list(struct("name", "value"))).alias("settings"))
+)
+
+output_path = OUTPUT_BUCKET + S3_KEY
+events_df.write.partitionBy("id").mode("overwrite").parquet(output_path)

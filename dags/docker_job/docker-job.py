@@ -8,6 +8,8 @@ from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 
+INPUT_BUCKET = "s3://user-events/"
+S3_KEY = "year={{execution_date.strftime('%Y')}}/month={{execution_date.strftime('%m')}}/day={{execution_date.strftime('%d')}}/"
 
 default_args = {
     "owner": "airflow",
@@ -26,7 +28,7 @@ with DAG(
     schedule_interval="@daily",
     catchup=False,
 ) as dag:
-    s3_events_key = "s3://user-events/year={{execution_date.strftime('%Y')}}/month={{execution_date.strftime('%m')}}/day={{execution_date.strftime('%d')}}/*"
+    s3_events_key = INPUT_BUCKET + S3_KEY + "*"
     s3_sensor = S3KeySensor(
         task_id="check-user-events",
         poke_interval=60,
@@ -48,7 +50,7 @@ with DAG(
         command="spark-submit ./aggregate-events.py",
         docker_url="tcp://docker-proxy:2375",
         mount_tmp_dir=False,
-        environment={"EVENTS_S3_KEY": s3_events_key},
+        environment={"S3_KEY": S3_KEY, "EVENTS_S3_URI": s3_events_key},
         network_mode="default_network",  # run the docker container in the same network as localstack
     )
 
