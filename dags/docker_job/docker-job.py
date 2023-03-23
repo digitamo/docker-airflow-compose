@@ -1,68 +1,57 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
+from airflow.models import Connection
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
-from airflow.operators.python_operator import BranchPythonOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 
 
-# TODO: Enable this DAG by default
 default_args = {
-    'owner': 'airflow',
-    'description': 'Use of the DockerOperator',
-    'depend_on_past': False,
-    'start_date': datetime(2021, 5, 1),
-    'email_on_failure': False,
-    'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5)
+    "owner": "airflow",
+    "description": "Use of the DockerOperator",
+    "depend_on_past": False,
+    "start_date": datetime(2023, 3, 1),
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
 }
 
-with DAG('docker_operator_dag', default_args=default_args, schedule_interval="5 * * * *", catchup=False) as dag:
-    start_dag = DummyOperator(
-        task_id='start_dag'
+with DAG(
+    "events_ETL_dag",
+    default_args=default_args,
+    schedule_interval="@daily",
+    catchup=False,
+) as dag:
+    s3_events_key = "s3://user-events/year={{execution_date.strftime('%Y')}}/month={{execution_date.strftime('%m')}}/day={{execution_date.strftime('%d')}}/*"
+    s3_sensor = S3KeySensor(
+        task_id="check-user-events",
+        poke_interval=60,
+        timeout=180,
+        soft_fail=False,
+        retries=2,
+        bucket_key=s3_events_key,
+        wildcard_match=True,
+        aws_conn_id="aws_default",
+        dag=dag,
     )
 
-    end_dag = DummyOperator(
-        task_id='end_dag'
-    )
-
-    t1 = BashOperator(
-        task_id='print_current_date',
-        bash_command='date'
-    )
-
-    # t2 = DockerOperator(
-    #     task_id='docker_command_sleep',
-    #     image='event-transformation-task',
-    #     container_name='task___command_sleep',
-    #     api_version='auto',
-    #     auto_remove=True,
-    #     command="/bin/sleep 30",
-    #     docker_url="unix://var/run/docker.sock",
-    #     network_mode="bridge"
-    #     )
-
-    t3 = DockerOperator(
-        task_id='docker_command_hello',
-        image='event-transformation-task',
-        container_name='task___command_hello',
-        api_version='auto',
+    spark_job = DockerOperator(
+        task_id="docker_command_hello",
+        image="event-transformation-task",
+        container_name="task___command_hello",
+        api_version="auto",
         auto_remove=True,
-        command="echo Hello!",
+        command="spark-submit ./aggregate-events.py",
         docker_url="tcp://docker-proxy:2375",
-        network_mode="bridge",
+        mount_tmp_dir=False,
+        environment={"EVENTS_S3_KEY": s3_events_key},
+        network_mode="default_network",  # run the docker container in the same network as localstack
     )
 
-    t4 = BashOperator(
-        task_id='print_hello',
-        bash_command='echo "hello world"'
-    )
+    end_dag = DummyOperator(task_id="end_dag")
 
-    start_dag >> t1
-
-    # t1 >> t2 >> t4
-    t1 >> t3 >> t4
-
-    t4 >> end_dag
+    s3_sensor >> spark_job >> end_dag

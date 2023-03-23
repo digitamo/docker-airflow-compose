@@ -1,9 +1,11 @@
 FROM python:3.9.1
 
-COPY ./data .
+ARG SPARK_VERSION="3.3.2"
+ARG HADOOP_VERSION="3"
+# ARG AWS_ACCESS_KEY_ID="XXX"
+# ARG AWS_SECRET_ACCESS_KEY="XXX"
 
-ARG SPARK_VERSION="3.1.2"
-ARG HADOOP_VERSION="3.2"
+ENV S3_ENDPOINT="http://localstack:4566"
 
 
 ###############################
@@ -17,13 +19,13 @@ RUN apt-get update && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EB9B1D8886F44E2A && \
     add-apt-repository "deb http://security.debian.org/debian-security stretch/updates main" && \ 
     apt-get update && \
-    apt-get install -y openjdk-8-jdk && \
+    apt-get install -y openjdk-11-jdk && \
     pip freeze && \
     java -version $$ \
     javac -version
 
 # Setup JAVA_HOME 
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
 RUN export JAVA_HOME
 ###############################
 ## Finish JAVA installation
@@ -32,30 +34,44 @@ RUN export JAVA_HOME
 ###############################
 ## SPARK files and variables
 ###############################
-ENV SPARK_HOME /usr/local/spark
 
-# Spark submit binaries and jars (Spark binaries must be the same version of spark cluster)
-RUN cd "/tmp" && \
-        wget --no-verbose "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" && \
-        tar -xvzf "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" && \
-        mkdir -p "${SPARK_HOME}/bin" && \
-        mkdir -p "${SPARK_HOME}/assembly/target/scala-2.12/jars" && \
-        cp -a "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}/bin/." "${SPARK_HOME}/bin/" && \
-        cp -a "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}/jars/." "${SPARK_HOME}/assembly/target/scala-2.12/jars/" && \
-        rm "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz"
+# DOWNLOAD SPARK AND INSTALL
+RUN DOWNLOAD_URL_SPARK="https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" \
+    && wget --no-verbose -O apache-spark.tgz  "${DOWNLOAD_URL_SPARK}"\
+    && mkdir -p /home/spark \
+    && tar -xf apache-spark.tgz -C /home/spark --strip-components=1 \
+    && rm apache-spark.tgz
 
-# Create SPARK_HOME env var
-RUN export SPARK_HOME
-ENV PATH $PATH:/usr/local/spark/bin
+# SET SPARK ENV VARIABLES
+ENV SPARK_HOME="/home/spark"
+ENV PATH="${SPARK_HOME}/bin/:${PATH}"
+
+# SET PYSPARK VARIABLES
+ENV PYTHONPATH="${SPARK_HOME}/python/:$PYTHONPATH"
+ENV PYTHONPATH="${SPARK_HOME}/python/lib/py4j-0.10.9.5-src.zip:$PYTHONPATH"
+
+
+# Add jars
+WORKDIR ${SPARK_HOME}/jars
+RUN wget https://repo1.maven.org/maven2/com/google/guava/guava/23.1-jre/guava-23.1-jre.jar
+RUN wget https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_2.12/3.3.0/spark-hadoop-cloud_2.12-3.3.0.jar
+RUN wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar
+RUN wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.2/hadoop-aws-3.3.2.jar
+WORKDIR ${SPARK_HOME}
 ###############################
 ## Finish SPARK files and variables
 ###############################
 
 
-# Let's change to  "$NB_USER" command so the image runs as a non root user by default
-USER $NB_UID
+# FIXME: uncommment
+# RUN adduser --disabled-password --gecos '' spark
+# USER spark
+
+COPY . .
 
 # Install PySpark
 RUN pip install pyspark==${SPARK_VERSION}
 
-ENTRYPOINT ["python" ]
+# TODO: update entry point
+# CMD ["echo", "hello world from Dockerfile"]
+CMD ["printenv"]
