@@ -62,16 +62,14 @@ WORKDIR ${SPARK_HOME}
 ## Finish SPARK files and variables
 ###############################
 
-
-# FIXME: uncommment
-# RUN adduser --disabled-password --gecos '' spark
-# USER spark
-
-COPY . .
-
 # Install PySpark
 RUN pip install pyspark==${SPARK_VERSION}
 
-# TODO: update entry point
-# CMD ["echo", "hello world from Dockerfile"]
-CMD ["printenv"]
+# Switch users
+RUN adduser --disabled-password --gecos '' spark
+USER spark
+
+COPY . .
+
+
+CMD ["spark-shell"]
