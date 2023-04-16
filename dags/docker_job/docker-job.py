@@ -26,7 +26,7 @@ with DAG(
     spark_job = DockerOperator(
         task_id="docker-estimate-pi",
         image="pi-estimate-task",
-        container_name="task___command_hello",
+        container_name="task___estimate-pi",
         api_version="auto",
         auto_remove=True,
         command="spark-submit ./pi-estimate.py",
