@@ -24,7 +24,7 @@ with DAG(
     start_dag = DummyOperator(task_id="start_dag")
 
     spark_job = DockerOperator(
-        task_id="docker_command_hello",
+        task_id="docker-estimate-pi",
         image="pi-estimate-task",
         container_name="task___command_hello",
         api_version="auto",
