@@ -1,7 +1,7 @@
 # Docker Airflow Spark
 An example repo demonstrating usage of Airflow and Docker withing a containerized environment. The Airflow job runs a simple Spark job estimating the value of π (Pi))
 
-**NOTE** This example is based on the official [Running Airflow in Docker](https://airflow.apache.org/docs/apache-airflow/2.5.3/docker-compose.yaml) guide with minor tweaks.
+**NOTE** This example is based on the official [Running Airflow in Docker](https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#running-airflow-in-docker) guide with minor tweaks.
 ## requirements
 
  1. docker compose v1.29.1 or newer
