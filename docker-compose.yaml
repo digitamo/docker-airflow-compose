@@ -69,7 +69,6 @@ x-airflow-common:
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
     # yamllint enable rule:line-length
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    AIRFLOW_CONN_AWS_DEFAULT: 'aws://a:a@?host=http://localstack:4566&region_name=us-east-1'
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
@@ -329,19 +328,6 @@ services:
       - "2376:2375"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
-  # Localstack to emulate S3 locally
-  localstack:
-    image: localstack/localstack
-    networks:
-      - default_network
-    ports:
-      - 4566:4566
-    environment:
-      - SERVICES=s3
-    volumes:
-      - "${LOCALSTACK_VOLUME_DIR:-./data}:/var/lib/localstack"
-      - "./scripts/aws:/etc/localstack/init/ready.d"
 
 volumes:
   postgres-db-volume:

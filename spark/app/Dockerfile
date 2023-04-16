@@ -2,11 +2,6 @@ FROM python:3.9.1
 
 ARG SPARK_VERSION="3.3.2"
 ARG HADOOP_VERSION="3"
-# ARG AWS_ACCESS_KEY_ID="XXX"
-# ARG AWS_SECRET_ACCESS_KEY="XXX"
-
-ENV S3_ENDPOINT="http://localstack:4566"
-
 
 ###############################
 ## Begin JAVA installation
@@ -55,8 +50,6 @@ ENV PYTHONPATH="${SPARK_HOME}/python/lib/py4j-0.10.9.5-src.zip:$PYTHONPATH"
 WORKDIR ${SPARK_HOME}/jars
 RUN wget https://repo1.maven.org/maven2/com/google/guava/guava/23.1-jre/guava-23.1-jre.jar
 RUN wget https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_2.12/3.3.0/spark-hadoop-cloud_2.12-3.3.0.jar
-RUN wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar
-RUN wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.2/hadoop-aws-3.3.2.jar
 WORKDIR ${SPARK_HOME}
 ###############################
 ## Finish SPARK files and variables
