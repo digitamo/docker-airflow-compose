@@ -23,11 +23,11 @@ An example repo demonstrating usage of Airflow and Docker withing a containerize
 1. Set up env vars `echo -e "AIRFLOW_UID=$(id -u)\nAIRFLOW_GID=0" > .env`
 2. Build the Spark job
    ```bash
-   $ docker build -f spark/app/Dockerfile -t pi-estimate-task spark/app
+   docker build -f spark/app/Dockerfile -t pi-estimate-task spark/app
    ```
 3. Run `docker-compose up airflow-init` which essentially runs `airflow db init`
 4. Start the Airflow web service and other components via `docker-compose up`
    4.1. (Optional) you can access the airflow web server by navigating to "localhost:8080" with the default user and password:
       - User: `airflow`
       - Password: `airflow`
-6. Once you're done, clean up by running: `docker-compose down --volumes --rmi all`
+5. Once you're done, clean up by running: `docker-compose down --volumes --rmi all`
