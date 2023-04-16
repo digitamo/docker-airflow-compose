@@ -6,6 +6,17 @@ An example repo demonstrating usage of Airflow and Docker withing a containerize
 
  1. docker compose v1.29.1 or newer
 
+## Project structure
+```
+├── dags                    # Airflow DAGs
+│   ├── docker_job
+│   │   ├── docker-job.py
+├── spark                   # Spark jobs
+│   ├── app
+│   │   ├── Dockerfile
+│   │   ├── pi-estimate.py
+├── docker-compose.yaml
+```
 
 ## Running locally
 
